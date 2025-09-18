@@ -1,0 +1,25 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Items folder
+    match /items/{image} {
+      // Allow read access to all users
+      allow read: if true;
+      
+      // Allow create access to authenticated users
+      allow create: if request.auth != null
+        && request.resource.size < 5 * 1024 * 1024  // 5MB limit
+        && request.resource.contentType.matches('image/.*');  // Only images
+      
+      // Allow update and delete access to the image owner only
+      allow update, delete: if request.auth != null;
+    }
+    
+    // Admin folder
+    match /admin/{allPaths=**} {
+      // Only allow access to authenticated users with admin claims
+      allow read, write: if request.auth != null 
+        && request.auth.token.admin == true;
+    }
+  }
+}

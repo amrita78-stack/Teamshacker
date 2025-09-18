@@ -1,0 +1,50 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Items collection
+    match /items/{item} {
+      // Allow read access to all users
+      allow read: if true;
+      
+      // Allow create access to authenticated users
+      allow create: if request.auth != null 
+        && request.resource.data.keys().hasAll(['name', 'category', 'userId', 'userEmail'])
+        && request.resource.data.name is string 
+        && request.resource.data.category is string
+        && request.resource.data.userId == request.auth.uid
+        && request.resource.data.userEmail == request.auth.token.email;
+      
+      // Allow update access to item owners only
+      allow update: if request.auth != null 
+        && resource.data.userId == request.auth.uid;
+      
+      // Allow delete access to item owners only
+      allow delete: if request.auth != null 
+        && resource.data.userId == request.auth.uid;
+    }
+    
+    // Users collection
+    match /users/{user} {
+      // Allow read access to the user themselves
+      allow read: if request.auth != null 
+        && request.auth.uid == user;
+      
+      // Allow create access to authenticated users
+      allow create: if request.auth != null;
+      
+      // Allow update access to the user themselves
+      allow update: if request.auth != null 
+        && request.auth.uid == user;
+      
+      // No delete access for users
+      allow delete: if false;
+    }
+    
+    // Admin operations
+    match /admin/{document} {
+      // Only allow access to authenticated users with admin claims
+      allow read, write: if request.auth != null 
+        && request.auth.token.admin == true;
+    }
+  }
+}
